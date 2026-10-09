@@ -123,8 +123,53 @@ class Renderer {
     drawSlide1() {
         // TODO: draw at least 3 polygons that spin about their own centers
         //   - have each polygon spin at a different speed / direction
+        let polygon = {
+            x: 300,
+            y: 300,
+            angle: 0,
+            spinVelocity: 0.5
+        };
         
-        
+        let angularVelocity = polygon.spinVelocity * 2 * Math.PI;
+
+        polygon.angle += angularVelocity * delta_time;
+
+        function drawSquare(ctx, polygon) {
+            ctx.save();
+
+            // Move origin to square's center
+            ctx.translate(polygon.x, polygon.y);
+
+            // Rotate around that center
+            ctx.rotate(polygon.angle);
+
+            // Square is centered around (0, 0)
+            ctx.beginPath();
+            ctx.moveTo(-50, -50);
+            ctx.lineTo(50, -50);
+            ctx.lineTo(50, 50);
+            ctx.lineTo(-50, 50);
+            ctx.closePath();
+
+            let lastTime = 0;
+
+            function animate(currentTime) {
+
+                // Convert milliseconds to seconds
+                let delta_time = (currentTime - lastTIme) / 1000;
+                lastTime = currentTime;
+
+                // Clear previous frame
+                ctx.clearReact(0, 0, canvas.width, canvas.height);
+
+                // Update rotation
+                polygon.angle += polygon.spinVelocity * 2 * Math.PI * delta_time;
+
+                // Draw new frame
+                drawSquare(ctx, polygon);
+            }
+
+        }
     }
 
     //
