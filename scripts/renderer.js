@@ -1,5 +1,7 @@
 import * as CG from './transforms.js';
+import { Matrix } from './matrix.js'; //imported -Jack 9:40pm 10/9
 
+            
 class Renderer {
     // canvas:              object ({id: __, width: __, height: __})
     // limit_fps_flag:      bool 
@@ -28,7 +30,17 @@ class Renderer {
                     transform: null
                 }
             ],
-            slide1: [],
+            slide1: [
+                {
+                    vertices: [
+                        CG.Vector3(-50, -50, 1),
+                        CG.Vector3(50, -50, 1),
+                        CG.Vector3(50, 50, 1),
+                        CG.Vector3(-50, 50, 1)
+                    ],
+                    transform: null
+                }
+            ],
             slide2: [],
             slide3: []
         };
@@ -86,6 +98,12 @@ class Renderer {
     //
     updateTransforms(time, delta_time) {
         // TODO: update any transformations needed for animation
+        // Jack: 10/9 7:11
+        this.angle = 0;
+        let spinVelocity = 0.5;
+        let deltaSeconds = delta_time / 1000;
+        let angularVelocity = spinVelocity * 2 * Math.PI;
+        this.angle += angularVelocity * deltaSeconds;
     }
     
     //
@@ -151,6 +169,9 @@ class Renderer {
             ctx.lineTo(-50, 50);
             ctx.closePath();
 
+            ctx.stroke();
+            ctx.restore();
+
             let lastTime = 0;
 
             function animate(currentTime) {
@@ -167,8 +188,10 @@ class Renderer {
 
                 // Draw new frame
                 drawSquare(ctx, polygon);
-            }
 
+                requestAnimationFrame(animate);
+            }
+            requestAnimationFrame(animate);
         }
     }
 
