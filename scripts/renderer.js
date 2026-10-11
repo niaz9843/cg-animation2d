@@ -16,6 +16,9 @@ class Renderer {
         this.fps = fps;
         this.start_time = null;
         this.prev_time = null;
+        this.angle1 = 0;
+        this.angle2 = 0;
+        this.angle3 = 0;
 
         this.models = {
             slide0: [
@@ -30,16 +33,79 @@ class Renderer {
                     transform: null
                 }
             ],
-            slide1: [
+             slide1: [
                 {
                     vertices: [
-                        CG.Vector3(-50, -50, 1),
+                        CG.Vector3(50, -50, 1),
                         CG.Vector3(50, -50, 1),
                         CG.Vector3(50, 50, 1),
                         CG.Vector3(-50, 50, 1)
                     ],
-                    transform: null
+                    angle: 0,
+                    velocity: 0.5,
+                    position: [300, 300],
+                    color: [255, 0, 0, 255]
+                },
+                {
+                    // Blue Triangle
+                    vertices: [
+                        CG.Vector3(0, -60, 1),
+                        CG.Vector3(60, 30, 1),
+                        CG.Vector3(-60, 30, 1)
+                    ],
+                    angle: 0,
+                    velocity: -0.25,
+                    position: [450, 150],
+                    color: [0, 0, 255, 255]
+                },
+                {
+                    // Green Hexagon
+                    vertices: [
+                        CG.Vector3(60, 0, 1),
+                        CG.Vector3(30, 52, 1),
+                        CG.Vector3(-30, 52, 1),
+                        CG.Vector3(-60, 0, 1),
+                        CG.Vector3(-30, -52, 1),
+                        CG.Vector3(30, -52, 1)
+                    ],
+                    angle: 0,
+                    velocity: 1.0,
+                    position: [600, 450],
+                    color: [0, 255, 0, 255]
                 }
+
+
+            //     {
+            //         // Red Square
+            //         vertices: [
+            //             CG.Vector3(-50, -50, 1),
+            //             CG.Vector3(50, -50, 1),
+            //             CG.Vector3(50, 50, 1),
+            //             CG.Vector3(-50, 50, 1)
+            //         ],
+            //         transform: null
+            //     },
+            //     {
+            //         // Blue Triangle
+            //         vertices: [
+            //             CG.Vector3(-50, -50, 1),
+            //             CG.Vector3(50, -50, 1),
+            //             CG.Vector3(0, 50, 1)
+            //         ],
+            //         transform: null
+            //     },
+            //     {
+            //         vertices: [
+            //         // Green Hexagon
+            //         CG.Vector3(60, 0, 1),
+            //         CG.Vector3(30, 52, 1),
+            //         CG.Vector3(-30, 52, 1),
+            //         CG.Vector3(-60, 0, 1),
+            //         CG.Vector3(-30, -52, 1),
+            //         CG.Vector3(30, -52, 1)
+            //     ],
+            //     transform: null
+            // },
             ],
             slide2: [],
             slide3: []
@@ -99,11 +165,25 @@ class Renderer {
     updateTransforms(time, delta_time) {
         // TODO: update any transformations needed for animation
         // Jack: 10/9 7:11
-        this.angle = 0;
         let spinVelocity = 0.5;
         let deltaSeconds = delta_time / 1000;
+
+        // Update the rotation angle for each polygon in slide1
+        for (let polygon of thiis.models.slide1) {
+            polygon.angle += polygon.velocity * 2 * Math.PI * deltaSeconds;
+        }
+
+        // Update the rotation angle for each polygon
+
         let angularVelocity = spinVelocity * 2 * Math.PI;
-        this.angle += angularVelocity * deltaSeconds;
+        
+        this.angle1 += velocity1 * 2 * Math.PI * deltaSeconds;
+        this.angle2 += velocity2 * 2 * Math.PI * deltaSeconds;
+        this.angle3 += velocity3 * 2 * Math.PI * deltaSeconds;
+
+        console.log("Angle 1: ", this.angle1);
+        console.log("Angle 2: ", this.angle2);
+        console.log("Angle 3: ", this.angle3);
     }
     
     //
@@ -141,58 +221,101 @@ class Renderer {
     drawSlide1() {
         // TODO: draw at least 3 polygons that spin about their own centers
         //   - have each polygon spin at a different speed / direction
-        let polygon = {
-            x: 300,
-            y: 300,
-            angle: 0,
-            spinVelocity: 0.5
-        };
-        
-        let angularVelocity = polygon.spinVelocity * 2 * Math.PI;
+        // Visit every polygon in slide1
+        for (let polygon of this.models.slide1) {
 
-        polygon.angle += angularVelocity * delta_time;
+            // Create rotation matrix
+            let rotation = new Matrix(3, 3);
+            CG.mat3x3Rotate(rotation, polygon.angle);
 
-        function drawSquare(ctx, polygon) {
-            ctx.save();
+            // Create translation matrix
+            let translation = new Matrix(3, 3);
+            CG.mat3x3Translate(
+                translation,
+                polygon.position[0],
+                polygon.position[1]
+            );
 
-            // Move origin to square's center
-            ctx.translate(polygon.x, polygon.y);
+            let transformedVertices = [];
 
-            // Rotate around that center
-            ctx.rotate(polygon.angle);
-
-            // Square is centered around (0, 0)
-            ctx.beginPath();
-            ctx.moveTo(-50, -50);
-            ctx.lineTo(50, -50);
-            ctx.lineTo(50, 50);
-            ctx.lineTo(-50, 50);
-            ctx.closePath();
-
-            ctx.stroke();
-            ctx.restore();
-
-            let lastTime = 0;
-
-            function animate(currentTime) {
-
-                // Convert milliseconds to seconds
-                let delta_time = (currentTime - lastTIme) / 1000;
-                lastTime = currentTime;
-
-                // Clear previous frame
-                ctx.clearReact(0, 0, canvas.width, canvas.height);
-
-                // Update rotation
-                polygon.angle += polygon.spinVelocity * 2 * Math.PI * delta_time;
-
-                // Draw new frame
-                drawSquare(ctx, polygon);
-
-                requestAnimationFrame(animate);
+            for (let vertex of polygon.vertices) {
+                let rotatedVertex = rotation.mult(vertex);
+                let finalVertex = translation.mult(rotatedVertex);
+                
+                transformedVertices.push(finalVertex);
             }
-            requestAnimationFrame(animate);
+
+            // Draw this polygon
+            this.drawConvexPolygon(transformedVertices, polygon.color);
         }
+        
+        // // Get the original square vertices
+        // let vertices = this.models.slide1[0].vertices;
+
+        // // Create the rotation matrix
+        // let rotation = new Matrix(3, 3);
+        // CG.mat3x3Rotate(rotation, this.angle1);
+
+        // // Create the translation matrix
+        // let translation = new Matrix(3, 3);
+        // CG.mat3x3Translate(translation, 300, 300);
+
+        // // Store the transformed vertices
+        // let transformedSquareVertices = [];
+
+        // // Rotate first, then translate each vertex
+        // for (let vertex of vertices) {
+        //     let rotatedVertex = rotation.mult(vertex);
+        //     let finalVertex = translation.mult(rotatedVertex);
+            
+        //     transformedSquareVertices.push(finalVertex);
+        // }
+
+        // let red = [255, 0, 0, 255];
+
+        // // Get the triangle's original vertices
+        // let triangleVertices = this.models.slide1[1].vertices;
+
+        // // Create the triangle's rotation matrix
+        // let triangleRotation = new Matrix(3, 3);
+        // CG.mat3x3Rotate(triangleRotation, this.angle2);
+
+        // // Position the triangle at (450, 150)
+        // let triangleTranslation = new Matrix(3, 3);
+        // CG.mat3x3Translate(triangleTranslation, 400, 150);
+        
+        // // Store transformed triangle vertices
+        // let transformedTriangleVertices = [];
+        // for (let vertex of triangleVertices) {
+        //     let rotatedVertex = triangleRotation.mult(vertex);
+        //     let finalVertex = triangleTranslation.mult(rotatedVertex);
+            
+        //     transformedTriangleVertices.push(finalVertex);
+        // }
+
+        // let blue = [0, 0, 255, 255];
+
+        // // Get the hexagon's original vertices
+        // let hexagonVertices = this.models.slide1[2].vertices;
+
+        // // Create the hexagon's rotation matrix
+        // let hexagonRotation = new Matrix(3, 3);
+        // CG.mat3x3Rotate(hexagonRotation, this.angle3);
+
+        // // Position the hexagon at (600, 300)
+        // let hexagonTranslation = new Matrix(3, 3);
+        // CG.mat3x3Translate(hexagonTranslation, 500, 300);
+        
+        // // Store transformed hexagon vertices
+        // let transformedHexagonVertices = [];
+        // for (let vertex of hexagonVertices) {
+        //     let rotatedVertex = hexagonRotation.mult(vertex);
+        //     let finalVertex = hexagonTranslation.mult(rotatedVertex);
+            
+        //     transformedHexagonVertices.push(finalVertex);
+        // }
+
+        // let green = [0, 255, 0, 255];
     }
 
     //
