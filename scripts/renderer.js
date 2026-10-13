@@ -35,8 +35,9 @@ class Renderer {
             ],
              slide1: [
                 {
+                    // Red Square
                     vertices: [
-                        CG.Vector3(50, -50, 1),
+                        CG.Vector3(-50, -50, 1),
                         CG.Vector3(50, -50, 1),
                         CG.Vector3(50, 50, 1),
                         CG.Vector3(-50, 50, 1)
@@ -70,46 +71,65 @@ class Renderer {
                     ],
                     angle: 0,
                     velocity: 1.0,
-                    position: [600, 450],
+                    position: [500, 400],
                     color: [0, 255, 0, 255]
                 }
-
-
-            //     {
-            //         // Red Square
-            //         vertices: [
-            //             CG.Vector3(-50, -50, 1),
-            //             CG.Vector3(50, -50, 1),
-            //             CG.Vector3(50, 50, 1),
-            //             CG.Vector3(-50, 50, 1)
-            //         ],
-            //         transform: null
-            //     },
-            //     {
-            //         // Blue Triangle
-            //         vertices: [
-            //             CG.Vector3(-50, -50, 1),
-            //             CG.Vector3(50, -50, 1),
-            //             CG.Vector3(0, 50, 1)
-            //         ],
-            //         transform: null
-            //     },
-            //     {
-            //         vertices: [
-            //         // Green Hexagon
-            //         CG.Vector3(60, 0, 1),
-            //         CG.Vector3(30, 52, 1),
-            //         CG.Vector3(-30, 52, 1),
-            //         CG.Vector3(-60, 0, 1),
-            //         CG.Vector3(-30, -52, 1),
-            //         CG.Vector3(30, -52, 1)
-            //     ],
-            //     transform: null
-            // },
             ],
             slide2: [],
-            slide3: []
+
+            this.pacmanPlaying = false;
+
+            slide3:
+                {
+                    phase: "firstpass",
+                    pacman: {
+                        position: [200, 300],
+                        radius: 45,
+                        mouthAngle: Math.PI / 5,
+                        angle: 0,
+                        scale: 1,
+                        color: [255, 220, 0, 255]
+                    },
+                    pellets: [],
+                    
+                    ghosts: [
+                        {
+                            // red ghost (Blinky)
+                            position: [-150, 300],
+                            speed: 120,
+                            color: [255, 0, 0, 255]
+                        },
+                        {
+                            // pink ghost (Pinky)
+                            position: [1000, 300],
+                            speed: -90,
+                            color: [255, 105, 180, 255]
+                        },
+                        {
+                            // cyan ghost (Inky)
+                            position: [1120, 300],
+                            speed: -90,
+                            color: [0, 255, 255, 255]
+                        },
+                        {
+                            // orange ghost (Clyde)
+                            position: [1240, 300],
+                            speed: -90,
+                            color: [255, 165, 0, 255]
+                        }
+                    ]
+                }
         };
+
+        // Slide 3: Create pellets along the corridor
+        for (let x = 0; x <= 800; x += 40) {
+            this.models.slide3.pellets.push({
+                x: x,
+                y: 300,
+                eaten: false
+            });
+        }
+
     }
 
     // flag:  bool
@@ -169,21 +189,53 @@ class Renderer {
         let deltaSeconds = delta_time / 1000;
 
         // Update the rotation angle for each polygon in slide1
-        for (let polygon of thiis.models.slide1) {
+        for (let polygon of this.models.slide1) {
             polygon.angle += polygon.velocity * 2 * Math.PI * deltaSeconds;
         }
 
-        // Update the rotation angle for each polygon
+        // Slide 3: 
+        // Prevent slide 3 from updating automatically until the user presses the "Play" button
+        if (this.slide_idx === 3 && this.pacmanPlaying) {
 
-        let angularVelocity = spinVelocity * 2 * Math.PI;
-        
-        this.angle1 += velocity1 * 2 * Math.PI * deltaSeconds;
-        this.angle2 += velocity2 * 2 * Math.PI * deltaSeconds;
-        this.angle3 += velocity3 * 2 * Math.PI * deltaSeconds;
+            // Animate Pacman's mouth
+            let pacman = this.models.slide3.pacman;
+            let seconds = time / 1000;
+            pacman.mouthAngle = 0.5 * Math.abs(Math.sin(seconds * 6));
 
-        console.log("Angle 1: ", this.angle1);
-        console.log("Angle 2: ", this.angle2);
-        console.log("Angle 3: ", this.angle3);
+            // Move Pacman horizontally
+            let speed = 120; // pixels per second
+            pacman.position[0] += speed * deltaSeconds;
+
+            // Check if Pacman has eaten any pellets
+            for (let pellet of this.models.slide3.pellets) {
+                if (!pellet.eaten && Math.abs(pacman.position[0] - pellet.x) < 10) {
+                    pellet.eaten = true;
+                }
+            }
+            // Move ghosts during ambush phase
+            if (this.models.slide3.phase === "ambush") {
+                for (let ghost of this.models.slide3.ghosts) {
+                    ghost.position[0] += ghost.speed * deltaSeconds;
+                }
+            }
+
+            // Pacman finishes the first pass and reappears on the left side of the screen
+            if (pacman.position[0] > this.canvas.width + pacman.radius) {
+                pacman.position[0] = -pacman.radius;
+
+                if (this.models.slide3.phase === "firstpass") {
+                    this.models.slide3.phase = "ambush";
+                }
+            }
+
+            // Update the rotation angle for each polygon
+
+            let angularVelocity = spinVelocity * 2 * Math.PI;
+
+            console.log("Angle 1: ", this.angle1);
+            console.log("Angle 2: ", this.angle2);
+            console.log("Angle 3: ", this.angle3);
+        }
     }
     
     //
@@ -236,6 +288,7 @@ class Renderer {
                 polygon.position[1]
             );
 
+            // Transform every vertex
             let transformedVertices = [];
 
             for (let vertex of polygon.vertices) {
@@ -248,74 +301,6 @@ class Renderer {
             // Draw this polygon
             this.drawConvexPolygon(transformedVertices, polygon.color);
         }
-        
-        // // Get the original square vertices
-        // let vertices = this.models.slide1[0].vertices;
-
-        // // Create the rotation matrix
-        // let rotation = new Matrix(3, 3);
-        // CG.mat3x3Rotate(rotation, this.angle1);
-
-        // // Create the translation matrix
-        // let translation = new Matrix(3, 3);
-        // CG.mat3x3Translate(translation, 300, 300);
-
-        // // Store the transformed vertices
-        // let transformedSquareVertices = [];
-
-        // // Rotate first, then translate each vertex
-        // for (let vertex of vertices) {
-        //     let rotatedVertex = rotation.mult(vertex);
-        //     let finalVertex = translation.mult(rotatedVertex);
-            
-        //     transformedSquareVertices.push(finalVertex);
-        // }
-
-        // let red = [255, 0, 0, 255];
-
-        // // Get the triangle's original vertices
-        // let triangleVertices = this.models.slide1[1].vertices;
-
-        // // Create the triangle's rotation matrix
-        // let triangleRotation = new Matrix(3, 3);
-        // CG.mat3x3Rotate(triangleRotation, this.angle2);
-
-        // // Position the triangle at (450, 150)
-        // let triangleTranslation = new Matrix(3, 3);
-        // CG.mat3x3Translate(triangleTranslation, 400, 150);
-        
-        // // Store transformed triangle vertices
-        // let transformedTriangleVertices = [];
-        // for (let vertex of triangleVertices) {
-        //     let rotatedVertex = triangleRotation.mult(vertex);
-        //     let finalVertex = triangleTranslation.mult(rotatedVertex);
-            
-        //     transformedTriangleVertices.push(finalVertex);
-        // }
-
-        // let blue = [0, 0, 255, 255];
-
-        // // Get the hexagon's original vertices
-        // let hexagonVertices = this.models.slide1[2].vertices;
-
-        // // Create the hexagon's rotation matrix
-        // let hexagonRotation = new Matrix(3, 3);
-        // CG.mat3x3Rotate(hexagonRotation, this.angle3);
-
-        // // Position the hexagon at (600, 300)
-        // let hexagonTranslation = new Matrix(3, 3);
-        // CG.mat3x3Translate(hexagonTranslation, 500, 300);
-        
-        // // Store transformed hexagon vertices
-        // let transformedHexagonVertices = [];
-        // for (let vertex of hexagonVertices) {
-        //     let rotatedVertex = hexagonRotation.mult(vertex);
-        //     let finalVertex = hexagonTranslation.mult(rotatedVertex);
-            
-        //     transformedHexagonVertices.push(finalVertex);
-        // }
-
-        // let green = [0, 255, 0, 255];
     }
 
     //
@@ -326,14 +311,152 @@ class Renderer {
 
 
     }
+    
+    // Slide 3: Draw the ghost character
 
-    //
+    drawGhost(ghost) {
+        // Get ghost and Pac-Man positions
+        let x = ghost.position[0];
+        let y = ghost.position[1];
+        let pacman = this.models.slide3.pacman;
+
+        // Ghost body color
+        this.ctx.fillStyle = `rgba(${ghost.color[0]}, ${ghost.color[1]}, ${ghost.color[2]}, 1)`;
+
+        this.ctx.beginPath();
+
+        // Ghost body dimensions
+        let radius = 40;
+        let bottom = y - 45;
+
+        this.ctx.beginPath();
+
+        // Rounded upper half
+        this.ctx.arc(x, y, radius, Math.PI, 0, true);
+
+        // Right side
+        this.ctx.lineTo(x + radius, bottom);
+
+        // Wavy bottom, from right to left
+        this.ctx.lineTo(x + 30, bottom - 10);
+        this.ctx.lineTo(x + 20, bottom);
+        this.ctx.lineTo(x + 10, bottom - 10);
+        this.ctx.lineTo(x, bottom);
+        this.ctx.lineTo(x - 10, bottom - 10);
+        this.ctx.lineTo(x - 20, bottom);
+        this.ctx.lineTo(x - 30, bottom - 10);
+        this.ctx.lineTo(x - radius, bottom);
+
+        // Close the path and fill the body
+        this.ctx.closePath();
+        this.ctx.fill();
+
+        // White eyes
+        this.ctx.fillStyle = "white";
+        this.ctx.beginPath();
+
+        this.ctx.ellipse(x - 15, y - 8, 11, 15, 0, 0, 2 * Math.PI);
+        this.ctx.ellipse(x + 15, y - 8, 11, 15, 0, 0, 2 * Math.PI);
+
+        this.ctx.fill();
+
+        // Determine where the ghost is looking
+        let eyeOffset;
+
+        if (x < pacman.position[0]) {
+            // Ghost is left of Pac-Man: look right
+            eyeOffset = 3;
+        }
+        else {
+            // Ghost is right of Pac-Man: look left
+            eyeOffset = -3;
+        }
+
+        // Blue pupils
+        this.ctx.fillStyle = "blue";
+        this.ctx.beginPath();
+
+        this.ctx.arc(x - 15 + eyeOffset, y - 8, 6, 0, 2 * Math.PI);
+        this.ctx.arc(x + 15 + eyeOffset, y - 8, 6, 0, 2 * Math.PI);
+
+        this.ctx.fill();
+    }
+
+    
     drawSlide3() {
         // TODO: get creative!
         //   - animation should involve all three basic transformation types
-        //     (translation, scaling, and rotation)
         
+        // Black arcade background
+        this.ctx.fillStyle = "black";
+        this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+
+        // Blue maze walls
+        this.ctx.strokeStyle = "blue";
+        this.ctx.lineWidth = 6;
+
+        // Corridor walls
+        let wallY = [160, 240, 360, 440];
+
+        for (let y of wallY) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(800, y);
+            this.ctx.stroke();
+        }
+
+        // Draw pellets that have not been eaten
+        for (let pellet of this.models.slide3.pellets) {
+
+            if (!pellet.eaten) {
+            this.ctx.beginPath();
+            this.ctx.arc(pellet.x, pellet.y, 4, 0, 2 * Math.PI);
+            this.ctx.fillStyle = "white";
+            this.ctx.fill();
+            }
+        }
         
+        // (translation, scaling, and rotation)
+        let pacman = this.models.slide3.pacman;
+
+        let vertices = [
+            CG.Vector3(0, 0, 1)
+        ];
+
+        let segments = 60;
+
+        for (let i = 0; i < segments; i++) {
+            let theta = pacman.mouthAngle + i * 
+            (2 * Math.PI - 2 * pacman.mouthAngle) / segments;
+
+            let x = pacman.radius * Math.cos(theta);
+            let y = pacman.radius * Math.sin(theta);
+            
+            vertices.push(CG.Vector3(x, y, 1));
+        }
+        
+        let translation = new Matrix(3, 3);
+
+        CG.mat3x3Translate(
+            translation,
+            pacman.position[0],
+            pacman.position[1]
+        );
+
+        let transformedVertices = []; 
+
+        for (let vertex of vertices) {
+            transformedVertices.push(translation.mult(vertex));
+        }
+
+        this.drawConvexPolygon(transformedVertices, pacman.color);
+
+        // Draw ghosts
+        if (this.models.slide3.phase === "ambush") {
+            for (let ghost of this.models.slide3.ghosts) {
+                this.drawGhost(ghost);
+            }
+        }
     }
     
     // vertex_list:  array of object [Matrix(3, 1), Matrix(3, 1), ..., Matrix(3, 1)]

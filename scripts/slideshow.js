@@ -49,6 +49,14 @@ let app = createApp({
 }).mount('#content');
     
 app.renderer = new Renderer(app.view, app.limit_fps, app.fps);
+
+// Pacman Start Button
+document.getElementById("pacmanstart").onclick = () => {
+    app.renderer.pacmanPlaying = true;
+}
+
+// Pacman Paulse Button
+
 window.requestAnimationFrame((timestamp) => {
     app.renderer.animate(timestamp);
 });
