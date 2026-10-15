@@ -23,10 +23,11 @@ class Renderer {
         this.angle1 = 0;
         this.angle2 = 0;
         this.angle3 = 0;
+        this.growTime = 0;
 
         this.ball = {
             position: [400, 300],
-            velocity: [193, 137],
+            velocity: [150, 137],
             radius: 40
         };
         this.models = {
@@ -207,6 +208,11 @@ class Renderer {
         // Jack: 10/9 7:11
         let spinVelocity = 0.5;
         let deltaSeconds = delta_time / 1000;
+
+        // Advance the growing/shrinking animation while slide 2 is visible.
+        if (this.slide_idx === 2) {
+            this.growTime += Math.min(Math.max(deltaSeconds, 0), 0.5);
+        }
 
         // Slide 0: move the ball and bounce off the canvas edges.
         if (this.slide_idx === 0) {
@@ -473,8 +479,56 @@ class Renderer {
         // TODO: draw at least 2 polygons grow and shrink about their own centers
         //   - have each polygon grow / shrink different sizes
         //   - try at least 1 polygon that grows / shrinks non-uniformly in the x and y directions
+        const t = this.growTime;
 
+        const polygons = [
+            {
+                // Square: grows and shrinks equally in both directions.
+                vertices: [
+                    CG.Vector3(-60, -60, 1),
+                    CG.Vector3(60, -60, 1),
+                    CG.Vector3(60, 60, 1),
+                    CG.Vector3(-60, 60, 1)
+                ],
+                position: [230, 300],
+                sx: 1 + 0.6 * Math.sin(t * 2),
+                sy: 1 + 0.6 * Math.sin(t * 2),
+                color: [220, 50, 50, 255]
+            },
+            {
+                // Triangle: width and height change independently.
+                vertices: [
+                    CG.Vector3(0, -70, 1),
+                    CG.Vector3(65, 35, 1),
+                    CG.Vector3(-65, 35, 1)
+                ],
+                position: [560, 300],
+                sx: 1 + 0.7 * Math.sin(t * 1.5),
+                sy: 1 + 0.4 * Math.cos(t * 2.5),
+                color: [40, 100, 230, 255]
+            }
+        ];
 
+        for (const polygon of polygons) {
+            const scaling = new Matrix(3, 3);
+            CG.mat3x3Scale(scaling, polygon.sx, polygon.sy);
+
+            const translation = new Matrix(3, 3);
+            CG.mat3x3Translate(
+                translation,
+                polygon.position[0],
+                polygon.position[1]
+            );
+
+            const transformedVertices = polygon.vertices.map(vertex =>
+                translation.mult(scaling.mult(vertex))
+            );
+
+            this.drawConvexPolygon(
+                transformedVertices,
+                polygon.color
+            );
+        }
     }
     
     // Slide 3: Draw the ghost character
