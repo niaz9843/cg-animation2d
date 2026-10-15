@@ -22,6 +22,13 @@ let app = createApp({
         };
     },
 
+    mounted() {
+        this.renderer = new Renderer(this.view, this.limit_fps, this.fps);
+        window.requestAnimationFrame((timestamp) => {
+            this.renderer.animate(timestamp);
+        });
+    },
+
     watch: {
         limit_fps(new_value, old_value) {
             this.renderer.limitFps(new_value);
@@ -47,8 +54,3 @@ let app = createApp({
         }
     }
 }).mount('#content');
-    
-app.renderer = new Renderer(app.view, app.limit_fps, app.fps);
-window.requestAnimationFrame((timestamp) => {
-    app.renderer.animate(timestamp);
-});

@@ -12,11 +12,16 @@
             <h1>2D Transforms and Animation</h1>
             <div id="slideshow">
                 <canvas id="view"></canvas>
-                <div id="slide_label" :style="'width: ' + view.width + 'px;'">
+                <div id="slide_label" style="background-color: #ccc; color: #000; z-index: 1;" :style="'width: ' + view.width + 'px;'">
                     <img class="slide_arrow" src="images/left_icon.png" alt="left arrow" height="32" @click="prevSlide" />
                     <p>{{ slide_description[slide_idx] }}</p>
                     <img class="slide_arrow" src="images/right_icon.png" alt="left arrow" height="32" @click="nextSlide" />
                 </div>
+            </div>
+
+            <!-- Pacman Controls -->
+            <div id="pacmanControls" v-show="slide_idx === 3">
+                <button id="pacmanToggle" @click="renderer.pacmanPlaying = !renderer.pacmanPlaying">{{ renderer && renderer.pacmanPlaying ? 'Stop' : 'Start' }}</button>
             </div>
             <br/>
             <div class="spacer"></div>
