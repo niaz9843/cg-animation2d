@@ -24,6 +24,11 @@ class Renderer {
         this.angle2 = 0;
         this.angle3 = 0;
 
+        this.ball = {
+            position: [400, 300],
+            velocity: [193, 137],
+            radius: 40
+        };
         this.models = {
             slide0: [
                 // example model (diamond) -> should be replaced with actual model
@@ -131,6 +136,9 @@ class Renderer {
                 eaten: false
             });
         }
+        
+        // Save the starting scene so Reset can restore everything.
+        this.initialPacmanScene = JSON.stringify(this.models.slide3);
 
     }
 
@@ -138,6 +146,16 @@ class Renderer {
     limitFps(flag) {
         this.limit_fps = flag;
     }
+
+    handlePacmanButton() {
+    if (this.models.slide3.phase === "finished") {
+        // Restore Pac-Man, ghosts, pellets, and animation phase.
+        this.models.slide3 = JSON.parse(this.initialPacmanScene);
+        this.pacmanPlaying = false;
+    } else {
+        this.pacmanPlaying = !this.pacmanPlaying;
+    }
+}
 
     // n:  int
     setFps(n) {
@@ -190,53 +208,45 @@ class Renderer {
         let spinVelocity = 0.5;
         let deltaSeconds = delta_time / 1000;
 
+        // Slide 0: move the ball and bounce off the canvas edges.
+        if (this.slide_idx === 0) {
+            // Small steps keep the ball inside the canvas after delayed frames.
+            let remaining = Math.min(Math.max(deltaSeconds, 0), 0.5);
+
+            while (remaining > 0) {
+                const dt = Math.min(remaining, 1 / 120);
+
+                for (let axis = 0; axis < 2; axis++) {
+                    const minimum = this.ball.radius;
+                    const maximum =
+                        (axis === 0 ? this.canvas.width : this.canvas.height)
+                        - this.ball.radius;
+
+                    this.ball.position[axis] += this.ball.velocity[axis] * dt;
+
+                    if (this.ball.position[axis] > maximum) {
+                        this.ball.position[axis] =
+                            2 * maximum - this.ball.position[axis];
+                        this.ball.velocity[axis] =
+                            -Math.abs(this.ball.velocity[axis]);
+                    } else if (this.ball.position[axis] < minimum) {
+                        this.ball.position[axis] =
+                            2 * minimum - this.ball.position[axis];
+                        this.ball.velocity[axis] =
+                            Math.abs(this.ball.velocity[axis]);
+                    }
+                }
+
+                remaining -= dt;
+            }
+        }
+
         // Update the rotation angle for each polygon in slide1
         for (let polygon of this.models.slide1) {
             polygon.angle += polygon.velocity * 2 * Math.PI * deltaSeconds;
         }
 
-        // Slide 3: 
-        // Prevent slide 3 from updating automatically until the user presses the "Play" button
-        // if (this.slide_idx === 3 && this.pacmanPlaying) {
-
-        //     // Animate Pacman's mouth
-        //     let pacman = this.models.slide3.pacman;
-        //     let seconds = time / 1000;
-        //     pacman.mouthAngle = 0.5 * Math.abs(Math.sin(seconds * 6));
-
-        //     // Move Pacman horizontally
-        //     let speed = 140; // pixels per second
-        //     pacman.position[0] += speed * deltaSeconds;
-
-        //     // Check if Pacman has eaten any pellets
-        //     for (let pellet of this.models.slide3.pellets) {
-        //         if (!pellet.eaten && Math.abs(pacman.position[0] - pellet.x) < 10) {
-        //             pellet.eaten = true;
-        //         }
-        //     }
-        //     // Move ghosts during ambush phase
-        //     if (this.models.slide3.phase !== "firstpass") {
-        //         for (let ghost of this.models.slide3.ghosts) {
-        //             ghost.position[0] += ghost.speed * deltaSeconds;
-        //         }
-        //     }
-
-        //     // Pacman finishes the first pass and reappears on the left side of the screen
-        //     if (pacman.position[0] > this.canvas.width + pacman.radius) {
-        //         pacman.position[0] = -pacman.radius;
-
-        //         if (this.models.slide3.phase === "firstpass") {
-        //             this.models.slide3.phase = "ambush";
-        //         }
-        //     }
-
-        //     // Update the rotation angle for each polygon
-
-        //     let angularVelocity = spinVelocity * 2 * Math.PI;
-
-        //     console.log("Angle 1: ", this.angle1);
-        //     console.log("Angle 2: ", this.angle2);
-        //     console.log("Angle 3: ", this.angle3);
+        // Slide 3
 
         if (this.slide_idx === 3 && this.pacmanPlaying) {
 
@@ -368,6 +378,7 @@ class Renderer {
 
             if (pacman.scale === 0) {
                 scene.phase = "finished";
+                this.pacmanPlaying = false;
             }
         }
     }
@@ -394,15 +405,35 @@ class Renderer {
 
     //
     drawSlide0() {
-        // TODO: draw bouncing ball (circle that changes direction whenever it hits an edge)
-        
-        
-        // Following lines are example of drawing a single polygon
-        // (this should be removed/edited after you implement the slide)
-        let teal = [0, 128, 128, 255];
-        this.drawConvexPolygon(this.models.slide0[0].vertices, teal);
-    }
+        const vertices = [];
+        const segments = 60;
 
+        for (let i = 0; i < segments; i++) {
+            const angle = 2 * Math.PI * i / segments;
+
+            vertices.push(CG.Vector3(
+                this.ball.radius * Math.cos(angle),
+                this.ball.radius * Math.sin(angle),
+                1
+            ));
+        }
+
+        const translation = new Matrix(3, 3);
+        CG.mat3x3Translate(
+            translation,
+            this.ball.position[0],
+            this.ball.position[1]
+        );
+
+        const transformedVertices = vertices.map(
+            vertex => translation.mult(vertex)
+        );
+
+        this.drawConvexPolygon(
+            transformedVertices,
+            [0, 128, 128, 255]
+        );
+    }
     //
     drawSlide1() {
         // TODO: draw at least 3 polygons that spin about their own centers
